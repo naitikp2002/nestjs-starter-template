@@ -96,3 +96,65 @@ Nest is an MIT-licensed open source project. It can grow thanks to the sponsors 
 ## License
 
 Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+
+
+----------------------------------------------------------------------------
+
+## Summary of Core NestJS Concepts
+
+This section summarizes the key NestJS principles used in this project, based on our discussion.
+
+### 1. Modular Design (`@Module`)
+
+**Question:** Why isn't `AuthController` listed in the main `app.module.ts`?
+
+**Answer:** NestJS uses modules to organize the application into logical "boxes."
+
+* **Feature Modules:** `AuthModule`, `UsersModule`, etc., are self-contained boxes. They define their own controllers and services (providers). For example, `auth.module.ts` lists `AuthController` in its `controllers` array.
+* **Root Module (`AppModule`):** The main `app.module.ts` imports these *modules* (the "boxes"), not the individual files inside them.
+* **Benefit:** This keeps your main `AppModule` clean and makes your features reusable and organized. When you import `AuthModule`, NestJS automatically makes all of its exported controllers and services available to the rest of the app.
+
+### 2. Dependency Injection (`@Injectable`)
+
+**Question:** What is `@Injectable()` and when is it used?
+
+**Answer:** `@Injectable()` is a decorator that marks a class as a **Provider** that can be managed by the NestJS dependency injection (DI) system.
+
+* **Who needs it?** `Services`, `Pipes`, `Guards`, and `Interceptors`.
+* **What does it do?** It tells NestJS, "You are responsible for creating an instance of this class and 'injecting' it into other classes that need it."
+* **How it works (The DI Pattern):**
+    1.  **Provider:** A class like `UsersService` is marked with `@Injectable()`.
+    2.  **Consumer:** A class like `UsersController` "asks" for the service in its `constructor`:
+        ```typescript
+        constructor(private usersService: UsersService) {}
+        ```
+    3.  **Module:** The `users.module.ts` file registers the `UsersService` in its `providers` array.
+
+    NestJS handles the rest, creating a single instance (singleton) of `UsersService` and passing it to `UsersController`. This saves you from ever having to write `new UsersService()`.
+
+### 3. Global Validation (`ValidationPipe`)
+
+**Question:** What does `app.useGlobalPipes(new ValidationPipe())` do?
+
+**Answer:** This line, added in `main.ts`, enables powerful, automatic validation for **every single request** that hits your application.
+
+* **How it works:** It uses the `class-validator` library.
+* **Your Job:** You create **DTOs** (Data Transfer Objects) for your request bodies using classes with validation decorators.
+    ```typescript
+    // src/posts/dto/create-post.dto.ts
+    import { IsString, IsNotEmpty } from 'class-validator';
+
+    export class CreatePostDto {
+      @IsString()
+      @IsNotEmpty()
+      title: string;
+    
+      @IsString()
+      content: string;
+    }
+    ```
+* **Nest's Job:** When a request hits a controller, the `ValidationPipe` automatically checks the `body` against the `CreatePostDto` rules.
+    * **If valid:** The request continues to your controller.
+    * **If invalid:** The pipe **automatically stops** the request and sends a `400 Bad Request` response to the client with a list of all errors (e.g., `"title should not be empty"`).
+
+This keeps your controller logic clean from messy `if`-checks.
